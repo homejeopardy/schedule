@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upper School Schedule</title>
+<style id="pageRule">@page { size: letter landscape; margin: 0.4in; }</style>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    margin: 0; padding: 24px; color: #111; background: #fff;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  h1 { font-size: 19px; font-weight: 600; margin: 0 0 16px; }
+
+  .controls {
+    display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end;
+    padding: 14px 16px; background: #f5f4f0; border-radius: 8px; margin-bottom: 18px;
+  }
+  .ctl { display: flex; flex-direction: column; gap: 5px; }
+  .ctl label { font-size: 11px; color: #555; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .ctl.hide { display: none; }
+  select, input[type=text] {
+    font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid #bbb;
+    border-radius: 6px; background: #fff; min-width: 128px;
+  }
+  #grade { font-weight: 600; border: 1px solid #333; }
+  button {
+    font: inherit; font-size: 14px; padding: 8px 16px; border: 1px solid #333;
+    border-radius: 6px; background: #fff; cursor: pointer;
+  }
+  button:hover { background: #eee; }
+  .spacer { flex: 1; }
+
+  .title-line { font-size: 14px; font-weight: 600; margin: 0 0 10px; }
+
+  .board { display: flex; gap: 6px; align-items: flex-start; }
+  .gutter { width: 42px; flex: none; }
+  .col { flex: 1; min-width: 0; }
+  .colhead {
+    font-size: 13px; font-weight: 600; text-align: center;
+    padding: 4px 0 5px; border-bottom: 1px solid #888; margin-bottom: 4px;
+  }
+  .gutter .colhead { border-bottom: none; visibility: hidden; }
+  .track { position: relative; }
+  .tick {
+    position: absolute; right: 5px; font-size: 9.5px; color: #888;
+    transform: translateY(-50%); white-space: nowrap;
+  }
+  .blk {
+    position: absolute; left: 0; right: 0; border: 1px solid #b8b8b8;
+    border-radius: 3px; padding: 2px 5px; overflow: hidden; background: #fff;
+  }
+  .blk .t { font-size: 9px; color: #777; line-height: 1.25; }
+  .sp {
+    font-weight: 600; color: #333; border: 1px solid #ccc;
+    border-radius: 2px; padding: 0 3px; margin-left: 2px;
+  }
+  .blk .n { font-size: 12.5px; font-weight: 600; line-height: 1.2; }
+  .blk .m { font-size: 9.5px; color: #555; line-height: 1.25; }
+  .gaplbl {
+    position: absolute; left: 0; right: 0; text-align: center;
+    font-size: 9px; color: #999; letter-spacing: .03em;
+  }
+
+  .daypage {
+    width: 3.5in; height: 2.75in; padding: 0.12in 0.13in;
+    margin: 0 0 14px; border: 1px solid #000; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .daypage h2 { font-size: 10pt; font-weight: 600; margin: 0; line-height: 1.15; }
+  .daypage .who { font-size: 6pt; color: #666; margin: 0 0 0.04in; line-height: 1.2; }
+  .rows { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+  .row {
+    display: flex; align-items: baseline; gap: 0.06in;
+    border-bottom: 0.5px solid #ddd; padding: 0.022in 0;
+  }
+  .row .t { width: 0.95in; flex: none; font-size: 6pt; color: #666; white-space: nowrap; }
+  .row .n { flex: 1; font-size: 8.5pt; font-weight: 600; line-height: 1.15; }
+  .row .m { font-size: 6pt; color: #555; text-align: right; white-space: nowrap; }
+  .row.brk { border-bottom: 0.5px dashed #e8e8e8; padding: 0.008in 0; }
+  .row.brk .n { font-size: 6pt; font-weight: 400; color: #999; font-style: italic; }
+  .row .sp { font-size: 5.5pt; padding: 0 1.5px; }
+
+  body.mode-grid #pagesView { display: none; }
+  body.mode-pages #gridView { display: none; }
+
+  @media print {
+    body { padding: 0; }
+    .controls { display: none; }
+    h1 { display: none; }
+    .wrap { max-width: none; }
+    .board { page-break-inside: avoid; }
+    .daypage {
+      page-break-after: always; page-break-inside: avoid;
+      margin: 0; border: 1px solid #000;
+    }
+    .daypage:last-child { page-break-after: auto; }
+    .row { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body class="mode-grid">
+<div class="wrap">
+
+  <h1>Upper School schedule</h1>
+
+  <div class="controls">
+    <div class="ctl">
+      <label for="grade">Grade</label>
+      <select id="grade">
+        <option value="6">6th grade</option>
+        <option value="7">7th grade</option>
+        <option value="8" selected>8th grade</option>
+      </select>
+    </div>
+    <div class="ctl" id="wrap1">
+      <label for="b1" id="lab1">1-block</label>
+      <select id="b1"></select>
+    </div>
+    <div class="ctl" id="wrap2">
+      <label for="b2" id="lab2">2-block</label>
+      <select id="b2"></select>
+    </div>
+    <div class="ctl">
+      <label for="adv">Advisor</label>
+      <select id="adv"></select>
+    </div>
+    <div class="ctl">
+      <label for="name">Name</label>
+      <input id="name" type="text" placeholder="Student name">
+    </div>
+    <div class="ctl">
+      <label for="mode">Print layout</label>
+      <select id="mode" style="min-width:210px;">
+        <option value="grid">All 5 days on one page</option>
+        <option value="pages">5 cards, one day each (3.5&times;2.75in)</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <button id="print" type="button">Print</button>
+  </div>
+
+  <div id="gridView">
+    <div class="title-line" id="titleLine"></div>
+    <div id="grid"></div>
+  </div>
+
+  <div id="pagesView"></div>
+
+</div>
+
+<script>
+var TIMES = {
+  MWF: {1:"8:20-8:50", 2:"8:53-9:43", 3:"9:46-10:36", 4:"10:57-11:47", 5:"11:50-12:40", 6:"1:27-2:17", 7:"2:20-3:10"},
+  TT:  {1:"8:20-9:10", 2:"9:13-10:03", 3:"10:24-11:14", 4:"11:17-12:07", 5:"12:50-1:40", 6:"1:43-2:33", 7:"2:36-3:10"}
+};
+var BREAKAFTER = {
+  MWF: {3:["10:36-10:54","Break"], 5:["12:40-1:24","Lunch"]},
+  TT:  {2:["10:03-10:21","Break"], 4:["12:07-12:47","Lunch"]}
+};
+var DAYTYPE = { Mon:"MWF", Tue:"TT", Wed:"MWF", Thu:"TT", Fri:"MWF" };
+var DAYS = ["Mon","Tue","Wed","Thu","Fri"];
+var FULL = { Mon:"Monday", Tue:"Tuesday", Wed:"Wednesday", Thu:"Thursday", Fri:"Friday" };
+
+var ASSEMBLY = {B:["Assembly","","ASG / USG"], P:["Assembly","","ASG / USG"], C:["Assembly","","ASG / USG"]};
+
+var SCHED = {};
+
+SCHED["6"] = {
+  Mon: {
+    2: ["1", {B:["Drama","AMz","F101"], P:["History","TC","A203"], C:["Science","NJ","Q2"]}],
+    3: ["1", {B:["Science","NJ","Q2"], P:["Drama","AMz","F101"], C:["History","TC","A203"]}],
+    4: ["1", {B:["History","TC","A203"], P:["Science","NJ","Q2"], C:["Mandarin","XX","S101"]}],
+    5: ["2", {B:["Math","NL","A102"], P:["Music","CSu","F102"], C:["PE","GB","Yard"]}],
+    6: ["2", {B:["PE","GB","Yard"], P:["Math","NL","A102"], C:["Music","CSu","F102"]}],
+    7: ["2", {B:["Music","CSu","F102"], P:["PE","GB","Yard"], C:["Math","NL","A102"]}]
+  },
+  Tue: {
+    1: ["2", {B:["Art","MJ","F104"], P:["English","MP","F103"], C:["Math","NL","A102"]}],
+    2: ["2", {B:["Math","NL","A102"], P:["Art","MJ","F104"], C:["English","MP","F103"]}],
+    3: ["2", {B:["English","MP","F103"], P:["Math","NL","A102"], C:["Art","MJ","F104"]}],
+    4: ["1", {B:["Spanish","SR","A102"], P:["History","TC","A203"], C:["Science","NJ","Q2"]}],
+    5: ["1", {B:["History","TC","A203"], P:["Science","NJ","Q2"], C:["Mandarin","XX","S101"]}],
+    6: ["1", {B:["Science","NJ","Q2"], P:["Spanish","SR","A102"], C:["History","TC","A203"]}],
+    7: ["1", {B:["Office hours","MP, SR","A201"], P:["Office hours","TC, CSu","A203"], C:["Office hours","NJ, NL","Q2"]}]
+  },
+  Wed: {
+    2: ["1", {B:["History","TC","A203"], P:["Science","NJ","Q2"], C:["Drama","AMz","F101"]}],
+    3: ["1", {B:["Spanish","SR","A102"], P:["History","TC","A203"], C:["Science","NJ","Q2"]}],
+    4: ["1", {B:["Science","NJ","Q2"], P:["Spanish","SR","A102"], C:["History","TC","A203"]}],
+    5: ["2", {B:["English","MP","F103"], P:["Study hall","XX","S101"], C:["Study skills","MS","A102"]}],
+    6: ["2", {B:["Study skills","TC","A102"], P:["English","MP","F103"], C:["Study hall","AS","S101"]}],
+    7: ["2", {B:["Study hall","AS","S101"], P:["Study skills","SR","A102"], C:["English","MP","F103"]}]
+  },
+  Thu: {
+    1: ["2", {B:["English","MP","F103"], P:["Math","NL","A102"], C:["PE","GB","Yard"]}],
+    2: ["2", {B:["PE","GB","Yard"], P:["English","MP","F103"], C:["Math","NL","A102"]}],
+    3: ["2", {B:["Math","NL","A102"], P:["PE","GB","Yard"], C:["English","MP","F103"]}],
+    4: ["1", {B:["Spanish","SR","A102"], P:["History","TC","A203"], C:["Science","NJ","Q2"]}],
+    5: ["1", {B:["Science","NJ","Q2"], P:["Spanish","SR","A102"], C:["History","TC","A203"]}],
+    6: ["1", {B:["History","TC","A203"], P:["Science","NJ","Q2"], C:["Mandarin","XX","S101"]}],
+    7: ["2", {B:["Office hours","MP, SR","A201"], P:["Office hours","TC, CSu","A203"], C:["Office hours","NJ, NL","Q2"]}]
+  },
+  Fri: {
+    2: ["x", ASSEMBLY],
+    3: ["1", {B:["Wheel","NL","A202"], P:["Spanish","SR","A102"], C:["Mandarin","XX","S101"]}],
+    4: ["1", {B:["Spanish","SR","A102"], P:["Wheel","NJ","Q2"], C:["Wheel","MP, CSu","F103"]}],
+    5: ["2", {B:["Music","CSu","F102"], P:["Math","NL","A102"], C:["English","MP","F103"]}],
+    6: ["2", {B:["English","MP","F103"], P:["Music","CSu","F102"], C:["Math","NL","A102"]}],
+    7: ["2", {B:["Math","NL","A102"], P:["English","MP","F103"], C:["Music","CSu","F102"]}]
+  }
+};
+
+SCHED["7"] = {
+  Mon: {
+    2: ["L", {B:["Spanish","SR","A101"], P:["Spanish","CR","A201"], C:["Mandarin","XX","S101"]}],
+    3: ["1", {B:["Science","SEL","Q1"], P:["Math","KH","A101"], C:["Music","JK","M1"]}],
+    4: ["1", {B:["Math","KH","A101"], P:["Music","JK","M1"], C:["Science","SEL","Q1"]}],
+    5: ["1", {B:["History","MH","A201"], P:["English","SPi","A103"], C:["Math","KH","A101"]}],
+    6: ["1", {B:["Music","JK","M1"], P:["History","MH","A201"], C:["English","SPi","A103"]}],
+    7: ["1", {B:["English","SPi","A103"], P:["Science","SEL","Q1"], C:["History","MH","A201"]}]
+  },
+  Tue: {
+    1: ["L", {B:["Spanish","SR","A101"], P:["Spanish","CR","A201"], C:["Mandarin","XX","S101"]}],
+    2: ["1", {B:["History","MH","A201"], P:["Math","KH","A101"], C:["Science","SEL","Q1"]}],
+    3: ["1", {B:["Math","KH","A101"], P:["History","MH","A201"], C:["Science","SEL","Q1"]}],
+    4: ["1", {B:["Science","SEL","Q1"], P:["PE","GB","Yard"], C:["History","MH","A201"]}],
+    5: ["1", {B:["Science","SEL","Q1"], P:["Art","MJ","F104"], C:["PE","GB","Yard"]}],
+    6: ["1", {B:["PE","GB","Yard"], P:["Art","MJ","F104"], C:["Math","KH","A101"]}],
+    7: ["L", {B:["Office hours","SEL, KH","A101"], P:["Office hours","MH, MJ","A102"], C:["Office hours","MS, XX","A103"]}]
+  },
+  Wed: {
+    2: ["L", {B:["Spanish","SR","A101"], P:["Spanish","CR","A201"], C:["Mandarin","XX","S101"]}],
+    3: ["1", {B:["Art","MJ","F104"], P:["History","MH","A201"], C:["Study hall","MP","S101"]}],
+    4: ["1", {B:["Art","MJ","F104"], P:["Science","SEL","Q1"], C:["English","SPi","A103"]}],
+    5: ["1", {B:["English","SPi","A103"], P:["Science","SEL","Q1"], C:["History","MH","A201"]}],
+    6: ["1", {B:["Wheel","SEL","Q1"], P:["Wheel","MH","A201"], C:["Wheel","SPi, KH","A103"]}],
+    7: ["1", {B:["History","MH","A201"], P:["English","SPi","A103"], C:["PE","GB","Yard"]}]
+  },
+  Thu: {
+    1: ["L", {B:["Spanish","SR","A101"], P:["Spanish","CR","A201"], C:["Mandarin","XX","S101"]}],
+    2: ["1", {B:["Math","KH","A101"], P:["Study hall","XX","S101"], C:["English","SPi","A103"]}],
+    3: ["1", {B:["Study hall","CR","S101"], P:["English","SPi","A103"], C:["Math","KH","A101"]}],
+    4: ["1", {B:["English","SPi","A103"], P:["Math","KH","A101"], C:["Drama","AMz","F101"]}],
+    5: ["1", {B:["Science","SEL","Q1"], P:["Drama","AMz","F101"], C:["Art","MJ","F104"]}],
+    6: ["1", {B:["Drama","AMz","F101"], P:["Music","JK","M1"], C:["Art","MJ","F104"]}],
+    7: ["1", {B:["Office hours","SEL, KH","A101"], P:["Office hours","MH, MJ","A102"], C:["Office hours","SPi, XX","A103"]}]
+  },
+  Fri: {
+    2: ["x", ASSEMBLY],
+    3: ["1", {B:["PE","GB","Yard"], P:["Science","SEL","Q1"], C:["Music","JK","M1"]}],
+    4: ["1", {B:["Music","JK","M1"], P:["PE","GB","Yard"], C:["Science","SEL","Q1"]}],
+    5: ["1", {B:["History","MH","A201"], P:["English","SPi","A103"], C:["Math","KH","A101"]}],
+    6: ["1", {B:["English","SPi","A103"], P:["Math","KH","A101"], C:["History","MH","A201"]}],
+    7: ["1", {B:["Math","KH","A101"], P:["History","MH","A201"], C:["English","SPi","A103"]}]
+  }
+};
+
+SCHED["8"] = {
+  Mon: {
+    2: ["1", {B:["History","AMi","A202"], P:["Wheel","CSe","F103"], C:["Wheel","JCo","Q1"]}],
+    3: ["1", {B:["Spanish","CR","A201"], P:["History","AMi","A202"], C:["Mandarin","XX","S101"]}],
+    4: ["1", {B:["Wheel","RM","F101"], P:["Spanish","CR","A201"], C:["History","AMi","A202"]}],
+    5: ["2", {B:["Math","CSe","A203"], P:["Science","JCo","Q2"], C:["Art","MJ","F104"]}],
+    6: ["2", {B:["Art","MJ","F104"], P:["Math","CSe","A203"], C:["Science","JCo","Q2"]}],
+    7: ["2", {B:["Science","JCo","Q2"], P:["Art","MJ","F104"], C:["Math","CSe","A203"]}]
+  },
+  Tue: {
+    1: ["2", {B:["Science","JCo","Q2"], P:["Math","CSe","A203"], C:["English","RM","A202"]}],
+    2: ["2", {B:["English","RM","A202"], P:["Science","JCo","Q2"], C:["Math","CSe","A203"]}],
+    3: ["2", {B:["Math","CSe","A203"], P:["English","RM","A202"], C:["Science","JCo","Q2"]}],
+    4: ["1", {B:["Music","JK","M1"], P:["History","AMi","F101"], C:["Mandarin","XX","S101"]}],
+    5: ["1", {B:["History","AMi","F101"], P:["Spanish","CR","A201"], C:["Music","JK","M1"]}],
+    6: ["1", {B:["Spanish","CR","A201"], P:["Music","JK","M1"], C:["History","AMi","F101"]}],
+    7: ["1", {B:["Office hours","AMi, AS","F101"], P:["Office hours","CR, CSe","F104"], C:["Office hours","JCo, RM","F103"]}]
+  },
+  Wed: {
+    2: ["1", {B:["Music","JK","M1"], P:["History","AMi","A202"], C:["PE","GB","Yard"]}],
+    3: ["1", {B:["PE","GB","Yard"], P:["Music","JK","M1"], C:["History","AMi","A202"]}],
+    4: ["1", {B:["History","AMi","A202"], P:["PE","GB","Yard"], C:["Music","JK","M1"]}],
+    5: ["2", {B:["Science","JCo","Q2"], P:["Math","CSe","A203"], C:["English","RM","A202"]}],
+    6: ["2", {B:["English","RM","A202"], P:["Science","JCo","Q2"], C:["Math","CSe","A203"]}],
+    7: ["2", {B:["Math","CSe","A203"], P:["English","RM","A202"], C:["Science","JCo","Q2"]}]
+  },
+  Thu: {
+    1: ["2", {B:["Math","CSe","A203"], P:["English","RM","A202"], C:["Science","JCo","Q2"]}],
+    2: ["2", {B:["Science","JCo","Q2"], P:["Math","CSe","A203"], C:["English","RM","A202"]}],
+    3: ["2", {B:["English","RM","A202"], P:["Science","JCo","Q2"], C:["Math","CSe","A203"]}],
+    4: ["1", {B:["Spanish","CR","A201"], P:["PE","GB","Yard"], C:["History","AMi","A202"]}],
+    5: ["1", {B:["PE","GB","Yard"], P:["History","AMi","A202"], C:["Mandarin","XX","S101"]}],
+    6: ["1", {B:["History","AMi","A202"], P:["Spanish","CR","A201"], C:["PE","GB","Yard"]}],
+    7: ["2", {B:["Office hours","AMi, AS","F101"], P:["Office hours","CR, CSe","F104"], C:["Office hours","JCo, RM","F103"]}]
+  },
+  Fri: {
+    2: ["x", ASSEMBLY],
+    3: ["1", {B:["Spanish","CR","A201"], P:["Study hall","AMi","A202"], C:["Study hall","CSe","A203"]}],
+    4: ["1", {B:["Study hall","AS","A203"], P:["Spanish","CR","A201"], C:["Mandarin","XX","S101"]}],
+    5: ["2", {B:["English","RM","A202"], P:["Art","MJ","F104"], C:["Drama","AMz","F101"]}],
+    6: ["2", {B:["Drama","AMz","F101"], P:["English","RM","A202"], C:["Art","MJ","F104"]}],
+    7: ["2", {B:["Art","MJ","F104"], P:["Drama","AMz","F101"], C:["English","RM","A202"]}]
+  }
+};
+
+var ADVISORS = {
+  "6": [["TC","A203"], ["NJ","Q2"], ["NL","F103"], ["CSu","F102"], ["SR","A102"]],
+  "7": [["SPi","A103"], ["MJ","F104"], ["SEL","Q1"], ["MH","A201"], ["KH","A101"]],
+  "8": [["JCo","M1"], ["CR","F101"], ["AMi","A202"], ["AS","S101"], ["RM","Garden / M2"]]
+};
+
+var NAMES = {
+  AMi: "Ms. Mitchell",
+  AMz: "Ms. Marziano",
+  AS:  "Mr. Andrew",
+  CR:  "Mx. Rodea",
+  CSe: "Ms. Seto",
+  CSu: "Ms. Sumsion",
+  GB:  "Coach G",
+  JCo: "Mr. Cohen",
+  JK:  "Mr. Kennedy",
+  KH:  "Ms. Henderson",
+  MH:  "Ms. Hardy",
+  MJ:  "Ms. Jimenez",
+  MP:  "Ms. Palmer",
+  MS:  "Mr. Stokes",
+  NJ:  "Ms. Nitya",
+  NL:  "Mr. Lewis",
+  RM:  "Ms. Manhoff",
+  SEL: "Mr. Ellenwood",
+  SPi: "Ms. Piper",
+  SR:  "Ms. Roggero",
+  TC:  "Mr. T",
+  XX:  "Ms. Xu"
+};
+
+function nameOf(s) {
+  if (!s) return "";
+  var parts = s.split(","), out = [];
+  for (var i = 0; i < parts.length; i++) {
+    var k = parts[i].replace(/^\s+|\s+$/g, "");
+    out.push(NAMES[k] || k);
+  }
+  return out.join(" & ");
+}
+
+var T0 = 500, T1 = 910, PXMIN = 1.6;
+var H = Math.round((T1 - T0) * PXMIN);
+
+function mins(s) {
+  var a = s.split(":"), hh = parseInt(a[0], 10), mm = parseInt(a[1], 10);
+  if (hh < 8) hh += 12;
+  return hh * 60 + mm;
+}
+function span(range) { var a = range.split("-"); return [mins(a[0]), mins(a[1])]; }
+function yAt(m) { return Math.round((m - T0) * PXMIN); }
+function clock(m) {
+  var hh = Math.floor(m / 60), mm = m % 60;
+  if (hh > 12) hh -= 12;
+  return hh + ":" + (mm < 10 ? "0" + mm : mm);
+}
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function state() {
+  return {
+    g: document.getElementById("grade").value,
+    s1: document.getElementById("b1").value,
+    s2: document.getElementById("b2").value,
+    adv: document.getElementById("adv").value,
+    who: document.getElementById("name").value.trim()
+  };
+}
+
+function comboLabel(st) {
+  var second = st.g === "7" ? "L" : "2";
+  return st.g + st.s1 + "1 + " + st.g + st.s2 + second;
+}
+
+function lookup(day, p, st) {
+  var cell = SCHED[st.g][day][p], v, tag;
+  if (p === 1 && !cell) {
+    if (st.adv) { var a = st.adv.split("|"); return ["Advisory", nameOf(a[0]), a[1], ""]; }
+    return ["Advisory", "", "see advisor", ""];
+  }
+  if (!cell) return null;
+  var blk = cell[0];
+  if (blk === "2") { v = cell[1][st.s2]; tag = st.g + st.s2 + "2"; }
+  else if (blk === "L") { v = cell[1][st.s2]; tag = st.g + st.s2 + "L"; }
+  else if (blk === "1") { v = cell[1][st.s1]; tag = st.g + st.s1 + "1"; }
+  else { v = cell[1]["B"]; tag = ""; }
+  return [v[0], nameOf(v[1]), v[2], tag];
+}
+
+function fillSplits() {
+  var g = document.getElementById("grade").value;
+  var b1 = document.getElementById("b1"), b2 = document.getElementById("b2");
+  var keep1 = b1.value, keep2 = b2.value;
+  var second = g === "7" ? "L" : "2";
+  var opts = ["B","P","C"], h1 = "", h2 = "";
+  for (var i = 0; i < opts.length; i++) {
+    h1 += '<option value="' + opts[i] + '">' + g + opts[i] + '1</option>';
+    h2 += '<option value="' + opts[i] + '">' + g + opts[i] + second + "</option>";
+  }
+  b1.innerHTML = h1; b2.innerHTML = h2;
+  if (keep1) b1.value = keep1;
+  if (keep2) b2.value = keep2;
+
+  document.getElementById("lab1").textContent = "1-block";
+  document.getElementById("lab2").textContent = g === "7" ? "Language block" : "2-block";
+
+  var adv = document.getElementById("adv"), list = ADVISORS[g], ha = '<option value="">&mdash;</option>';
+  for (var j = 0; j < list.length; j++) {
+    ha += '<option value="' + list[j][0] + "|" + list[j][1] + '">'
+        + esc(nameOf(list[j][0])) + " &mdash; " + esc(list[j][1]) + "</option>";
+  }
+  adv.innerHTML = ha;
+}
+
+function renderGrid(st) {
+  document.getElementById("titleLine").textContent =
+    (st.who ? st.who + "  —  " : "") + comboLabel(st);
+
+  var ticks = "";
+  for (var m = 510; m <= T1; m += 30) {
+    ticks += '<div class="tick" style="top:' + yAt(m) + 'px">' + clock(m) + "</div>";
+  }
+
+  var h = '<div class="board"><div class="gutter"><div class="colhead">.</div>'
+        + '<div class="track" style="height:' + H + 'px">' + ticks + "</div></div>";
+
+  for (var d = 0; d < DAYS.length; d++) {
+    var day = DAYS[d], dt = DAYTYPE[day];
+    h += '<div class="col"><div class="colhead">' + day + '</div><div class="track" style="height:' + H + 'px">';
+    for (var p = 1; p <= 7; p++) {
+      var v = lookup(day, p, st);
+      if (v) {
+        var range = TIMES[dt][p], sp = span(range);
+        var y = yAt(sp[0]), hgt = Math.round((sp[1] - sp[0]) * PXMIN) - 2;
+        var meta = (v[1] ? v[1] : "") + (v[1] && v[2] ? " · " : "") + (v[2] ? v[2] : "");
+        h += '<div class="blk" style="top:' + y + "px;height:" + hgt + 'px">'
+           + '<div class="t">' + p + " &middot; " + range + (v[3] ? ' <span class="sp">' + v[3] + "</span>" : "") + "</div>"
+           + '<div class="n">' + esc(v[0]) + "</div>"
+           + (meta ? '<div class="m">' + esc(meta) + "</div>" : "")
+           + "</div>";
+      }
+      var br = BREAKAFTER[dt][p];
+      if (br) {
+        var sb = span(br[0]);
+        var yb = yAt(sb[0]) + Math.round(((sb[1] - sb[0]) * PXMIN) / 2) - 6;
+        h += '<div class="gaplbl" style="top:' + yb + 'px">' + br[1] + "</div>";
+      }
+    }
+    h += "</div></div>";
+  }
+  h += "</div>";
+  document.getElementById("grid").innerHTML = h;
+}
+
+function renderPages(st) {
+  var label = comboLabel(st), out = "";
+  for (var d = 0; d < DAYS.length; d++) {
+    var day = DAYS[d], dt = DAYTYPE[day];
+    out += '<div class="daypage"><h2>' + FULL[day] + "</h2>"
+         + '<p class="who">' + esc((st.who ? st.who + "  —  " : "") + label) + "</p>"
+         + '<div class="rows">';
+    for (var p = 1; p <= 7; p++) {
+      var v = lookup(day, p, st);
+      if (v) {
+        var meta = (v[1] ? v[1] : "") + (v[1] && v[2] ? " · " : "") + (v[2] ? v[2] : "");
+        out += '<div class="row"><div class="t">' + p + " &middot; " + TIMES[dt][p]
+             + (v[3] ? ' <span class="sp">' + v[3] + "</span>" : "") + "</div>"
+             + '<div class="n">' + esc(v[0]) + "</div>"
+             + '<div class="m">' + esc(meta) + "</div></div>";
+      }
+      var br = BREAKAFTER[dt][p];
+      if (br) {
+        out += '<div class="row brk"><div class="t">' + br[0] + '</div><div class="n">' + br[1] + "</div></div>";
+      }
+    }
+    out += "</div></div>";
+  }
+  document.getElementById("pagesView").innerHTML = out;
+}
+
+function render() {
+  var st = state();
+  var mode = document.getElementById("mode").value;
+  document.body.className = "mode-" + mode;
+  document.getElementById("pageRule").textContent =
+    mode === "grid" ? "@page { size: letter landscape; margin: 0.4in; }"
+                    : "@page { size: letter portrait; margin: 0.5in; }";
+  if (mode === "grid") renderGrid(st); else renderPages(st);
+}
+
+document.getElementById("grade").addEventListener("change", function () { fillSplits(); render(); });
+var ids = ["b1","b2","adv","mode"];
+for (var i = 0; i < ids.length; i++) document.getElementById(ids[i]).addEventListener("change", render);
+document.getElementById("name").addEventListener("input", render);
+document.getElementById("print").addEventListener("click", function () { window.print(); });
+
+fillSplits();
+render();
+</script>
+</body>
+</html>
