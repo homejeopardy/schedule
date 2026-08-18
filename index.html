@@ -388,6 +388,7 @@ function lookup(day, p, st) {
   else if (blk === "L") { v = cell[1][st.s2]; tag = st.g + st.s2 + "L"; }
   else if (blk === "1") { v = cell[1][st.s1]; tag = st.g + st.s1 + "1"; }
   else { v = cell[1]["B"]; tag = ""; }
+  if (v[0] === "Office hours") return [v[0], "", "", tag];
   return [v[0], nameOf(v[1]), v[2], tag];
 }
 
