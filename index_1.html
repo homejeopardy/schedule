@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekly Schedule Maker</title>
+<style id="pageRule">@page { size: letter landscape; margin: 0.4in; }</style>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    margin: 0; padding: 24px; color: #111; background: #fff;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  h1 { font-size: 19px; font-weight: 600; margin: 0 0 16px; }
+
+  .controls {
+    display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end;
+    padding: 14px 16px; background: #f5f4f0; border-radius: 8px; margin-bottom: 18px;
+  }
+  .ctl { display: flex; flex-direction: column; gap: 5px; }
+  .ctl label { font-size: 11px; color: #555; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  select, input[type=text] {
+    font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid #bbb;
+    border-radius: 6px; background: #fff; min-width: 128px;
+  }
+  #cal { font-weight: 600; border: 1px solid #333; }
+  button {
+    font: inherit; font-size: 14px; padding: 8px 16px; border: 1px solid #333;
+    border-radius: 6px; background: #fff; cursor: pointer;
+  }
+  button:hover { background: #eee; }
+  button.small { font-size: 12px; padding: 4px 10px; }
+  button.primary { background: #333; color: #fff; }
+  button.primary:hover { background: #000; }
+  .spacer { flex: 1; }
+
+  .title-line { font-size: 14px; font-weight: 600; margin: 0 0 10px; }
+
+  .board { display: flex; gap: 6px; align-items: flex-start; }
+  .gutter { width: 42px; flex: none; }
+  .col { flex: 1; min-width: 0; }
+  .colhead {
+    font-size: 13px; font-weight: 600; text-align: center;
+    padding: 4px 0 5px; border-bottom: 1px solid #888; margin-bottom: 4px;
+  }
+  .gutter .colhead { border-bottom: none; visibility: hidden; }
+  .track { position: relative; }
+  .tick {
+    position: absolute; right: 5px; font-size: 9.5px; color: #888;
+    transform: translateY(-50%); white-space: nowrap;
+  }
+  .blk {
+    position: absolute; left: 0; right: 0; border: 1px solid #b8b8b8;
+    border-radius: 3px; padding: 2px 5px; overflow: hidden; background: #fff;
+  }
+  .blk .t { font-size: 9px; color: #777; line-height: 1.25; }
+  .sp {
+    font-weight: 600; color: #333; border: 1px solid #ccc;
+    border-radius: 2px; padding: 0 3px; margin-left: 2px;
+  }
+  .blk .n { font-size: 12.5px; font-weight: 600; line-height: 1.2; }
+  .blk .m { font-size: 9.5px; color: #555; line-height: 1.25; }
+  .gaplbl {
+    position: absolute; left: 0; right: 0; text-align: center;
+    font-size: 9px; color: #999; letter-spacing: .03em;
+  }
+
+  /* Color coding: tinted fill + solid accent on the left edge */
+  .blk, .row { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .blk { border-left-width: 3px; }
+  .row { border-left: 3px solid transparent; padding-left: 0.03in; }
+
+  .colorbar {
+    display: flex; gap: 10px 14px; flex-wrap: wrap; align-items: center;
+    padding: 10px 16px; background: #f5f4f0; border-radius: 8px; margin: -8px 0 18px;
+  }
+  .colorbar .cbtitle { font-size: 11px; color: #555; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .sw { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+  .sw input[type=color] {
+    width: 26px; height: 22px; padding: 0; border: 1px solid #bbb; border-radius: 4px;
+    background: none; cursor: pointer;
+  }
+
+  .howto {
+    margin: -8px 0 18px; padding: 10px 16px; background: #f5f4f0;
+    border-radius: 8px; font-size: 13px;
+  }
+  .howto summary { cursor: pointer; font-weight: 600; font-size: 12px; color: #555;
+    text-transform: uppercase; letter-spacing: .04em; }
+  .howtobody { max-width: 820px; line-height: 1.45; color: #333; }
+  .howtobody code { background: #eceae4; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .howtobody ul { margin: 6px 0; padding-left: 20px; }
+  .howtobody li { margin: 3px 0; }
+
+  /* ---------- editor ---------- */
+  .editor {
+    margin: -8px 0 18px; padding: 14px 16px; background: #f0f3f7;
+    border: 1px solid #cdd6e0; border-radius: 8px; font-size: 13px;
+  }
+  .editor h3 {
+    font-size: 11px; color: #456; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .04em; margin: 14px 0 6px;
+  }
+  .editor h3:first-child { margin-top: 0; }
+  .edrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 4px 0; }
+  .editor input[type=text] { font-size: 13px; padding: 5px 8px; min-width: 0; }
+  .editor select { font-size: 13px; padding: 5px 8px; min-width: 0; }
+  .editor .grow { flex: 1; }
+  .evtable { width: 100%; border-collapse: collapse; margin: 4px 0 8px; background: #fff; border-radius: 6px; }
+  .evtable td, .evtable th { border: 1px solid #dfe5ec; padding: 4px 8px; font-size: 12.5px; text-align: left; }
+  .evtable th { background: #e8edf3; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: #456; }
+  .evtable .dim { color: #888; }
+  .evform {
+    margin-top: 8px; padding: 12px; background: #fff; border: 1px solid #cdd6e0; border-radius: 6px;
+  }
+  .evform .daychecks { display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+  .pertable { border-collapse: collapse; margin-top: 6px; }
+  .pertable td, .pertable th { border: 1px solid #dfe5ec; padding: 3px 6px; font-size: 12.5px; }
+  .pertable th { background: #e8edf3; font-weight: 600; font-size: 11px; color: #456; }
+  .muted { color: #789; font-size: 12px; }
+
+  .daypage {
+    width: 3.5in; height: 2.75in; padding: 0.12in 0.13in;
+    margin: 0 0 14px; border: 1px solid #000; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .daypage h2 { font-size: 10pt; font-weight: 600; margin: 0; line-height: 1.15; }
+  .daypage .who { font-size: 6pt; color: #666; margin: 0 0 0.04in; line-height: 1.2; }
+  .rows { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+  .row {
+    display: flex; align-items: baseline; gap: 0.06in;
+    border-bottom: 0.5px solid #ddd; padding: 0.022in 0;
+  }
+  .row .t { width: 0.95in; flex: none; font-size: 6pt; color: #666; white-space: nowrap; }
+  .row .n { flex: 1; font-size: 8.5pt; font-weight: 600; line-height: 1.15; }
+  .row .m { font-size: 6pt; color: #555; text-align: right; white-space: nowrap; }
+  .row.brk { border-bottom: 0.5px dashed #e8e8e8; padding: 0.008in 0; }
+  .row.brk .n { font-size: 6pt; font-weight: 400; color: #999; font-style: italic; }
+  .row .sp { font-size: 5.5pt; padding: 0 1.5px; }
+
+  body.mode-grid #pagesView { display: none; }
+  body.mode-pages #gridView { display: none; }
+
+  @media print {
+    body { padding: 0; }
+    .controls { display: none; }
+    .colorbar { display: none; }
+    .howto { display: none; }
+    .editor { display: none; }
+    h1 { display: none; }
+    .wrap { max-width: none; }
+    .board { page-break-inside: avoid; }
+    .daypage {
+      page-break-after: always; page-break-inside: avoid;
+      margin: 0; border: 1px solid #000;
+    }
+    .daypage:last-child { page-break-after: auto; }
+    .row { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body class="mode-grid">
+<div class="wrap">
+
+  <h1>Weekly schedule maker</h1>
+
+  <div class="controls">
+    <div class="ctl">
+      <label for="cal">Schedule</label>
+      <select id="cal"></select>
+    </div>
+    <div id="choosers" style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;"></div>
+    <div class="ctl">
+      <label for="name">Name on printout</label>
+      <input id="name" type="text" placeholder="Optional">
+    </div>
+    <div class="ctl">
+      <label for="mode">Print layout</label>
+      <select id="mode" style="min-width:210px;">
+        <option value="grid">Whole week on one page</option>
+        <option value="pages">Cards, one day each (3.5&times;2.75in)</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label>&nbsp;</label>
+      <div style="display:flex;gap:6px;">
+        <button id="editBtn" type="button">Edit schedule</button>
+        <button id="saveBtn" type="button">Save file</button>
+        <button id="loadBtn" type="button">Load file</button>
+        <button id="resetBtn" type="button" style="display:none;">Reset to example</button>
+      </div>
+      <input id="jsonFile" type="file" accept=".json,application/json" style="display:none">
+    </div>
+    <div class="spacer"></div>
+    <button id="print" type="button">Print</button>
+  </div>
+
+  <div class="editor" id="editor" style="display:none;"></div>
+
+  <div class="colorbar" id="colorbar"></div>
+
+  <details class="howto">
+    <summary>How this works</summary>
+    <div class="howtobody">
+      <p>This makes printable weekly schedules &mdash; class timetables, work rotas, practice plans, family calendars. Click <b>Edit schedule</b> to change anything. Everything is saved in your browser automatically; <b>Save file</b> / <b>Load file</b> back it up or move it between computers as a small <code>.json</code> file.</p>
+      <ul>
+        <li><b>Schedules</b> &mdash; independent tabs (here, one per grade). Add as many as you like; each has its own events and menus.</li>
+        <li><b>Events</b> have a day, start and end times, a title, and optional detail (person) and location. Times are <code>H:MM</code> &mdash; write <code>1:27</code> for afternoon, or use 24-hour / am-pm forms. <b>Breaks</b> are thin labeled gaps (Lunch, Travel, &hellip;).</li>
+        <li><b>Choice menus</b> are for schedules that vary by person: define a menu (say, sections <code>B, P, C</code>, or shifts <code>Early, Late</code>) and any event can &ldquo;vary by&rdquo; it, with different content per option. The menus appear in the top bar, so one schedule prints correctly for everyone once they pick their options. Skip this entirely for a simple schedule.</li>
+        <li>The week grid's time axis sizes itself to your earliest and latest events, and Saturday/Sunday columns appear only if you use them. No two events in one schedule may overlap in time.</li>
+      </ul>
+    </div>
+  </details>
+
+  <div id="gridView">
+    <div class="title-line" id="titleLine"></div>
+    <div id="grid"></div>
+  </div>
+
+  <div id="pagesView"></div>
+
+</div>
+
+<script>
+
+
+var TIMES = {
+  MWF: {1:"8:20-8:50", 2:"8:53-9:43", 3:"9:46-10:36", 4:"10:57-11:47", 5:"11:50-12:40", 6:"1:27-2:17", 7:"2:20-3:10"},
+  TT:  {1:"8:20-9:10", 2:"9:13-10:03", 3:"10:24-11:14", 4:"11:17-12:07", 5:"12:50-1:40", 6:"1:43-2:33", 7:"2:36-3:10"}
+};
+var BREAKAFTER = {
+  MWF: {3:["10:36-10:54","Break"], 5:["12:40-1:24","Lunch"]},
+  TT:  {2:["10:03-10:21","Break"], 4:["12:07-12:47","Lunch"]}
+};
+var DAYTYPE = { Mon:"MWF", Tue:"TT", Wed:"MWF", Thu:"TT", Fri:"MWF" };
+var DAYS = ["Mon","Tue","Wed","Thu","Fri"];
+var FULL = { Mon:"Monday", Tue:"Tuesday", Wed:"Wednesday", Thu:"Thursday", Fri:"Friday" };
+
+var ASSEMBLY = {B:["Assembly","","ASG / USG"], P:["Assembly","","ASG / USG"], C:["Assembly","","ASG / USG"]};
+
+var SCHED = {};
+
+SCHED["6"] = {
+  Mon: {
+    2: ["1", {B:["Drama","AMz","F101"], P:["History","TC","A203"], C:["Science","NJ","Q2"]}],
+    3: ["1", {B:["Science","NJ","Q2"], P:["Drama","AMz","F101"], C:["History","TC","A203"]}],
+    4: ["1", {B:["History","TC","A203"], P:["Science","NJ","Q2"], C:["Mandarin","XX","S101"]}],
+    5: ["2", {B:["Math","NL","A102"], P:["Music","CSu","F102"], C:["PE","GB","Yard"]}],
+    6: ["2", {B:["PE","GB","Yard"], P:["Math","NL","A102"], C:["Music","CSu","F102"]}],
+    7: ["2", {B:["Music","CSu","F102"], P:["PE","GB","Yard"], C:["Math","NL","A102"]}]
+  },
+  Tue: {
+    1: ["2", {B:["Art","MJ","F104"], P:["English","MP","F103"], C:["Math","NL","A102"]}],
+    2: ["2", {B:["Math","NL","A102"], P:["Art","MJ","F104"], C:["English","MP","F103"]}],
+    3: ["2", {B:["English","MP","F103"], P:["Math","NL","A102"], C:["Art","MJ","F104"]}],
+    4: ["1", {B:["Spanish","SR","A102"], P:["History","TC","A203"], C:["Science","NJ","Q2"]}],
+    5: ["1", {B:["History","TC","A203"], P:["Science","NJ","Q2"], C:["Mandarin","XX","S101"]}],
+    6: ["1", {B:["Science","NJ","Q2"], P:["Spanish","SR","A102"], C:["History","TC","A203"]}],
+    7: ["1", {B:["Office hours","MP, SR","A201"], P:["Office hours","TC, CSu","A203"], C:["Office hours","NJ, NL","Q2"]}]
+  },
+  Wed: {
+    2: ["1", {B:["History","TC","A203"], P:["Science","NJ","Q2"], C:["Drama","AMz","F101"]}],
+    3: ["1", {B:["Spanish","SR","A102"], P:["History","TC","A203"], C:["Science","NJ","Q2"]}],
+    4: ["1", {B:["Science","NJ","Q2"], P:["Spanish","SR","A102"], C:["History","TC","A203"]}],
+    5: ["2", {B:["English","MP","F103"], P:["Study hall","XX","S101"], C:["Study skills","MS","A102"]}],
+    6: ["2", {B:["Study skills","TC","A102"], P:["English","MP","F103"], C:["Study hall","AS","S101"]}],
+    7: ["2", {B:["Study hall","AS","S101"], P:["Study skills","SR","A102"], C:["English","MP","F103"]}]
+  },
+  Thu: {
+    1: ["2", {B:["English","MP","F103"], P:["Math","NL","A102"], C:["PE","GB","Yard"]}],
+    2: ["2", {B:["PE","GB","Yard"], P:["English","MP","F103"], C:["Math","NL","A102"]}],
+    3: ["2", {B:["Math","NL","A102"], P:["PE","GB","Yard"], C:["English","MP","F103"]}],
+    4: ["1", {B:["Spanish","SR","A102"], P:["History","TC","A203"], C:["Science","NJ","Q2"]}],
+    5: ["1", {B:["Science","NJ","Q2"], P:["Spanish","SR","A102"], C:["History","TC","A203"]}],
+    6: ["1", {B:["History","TC","A203"], P:["Science","NJ","Q2"], C:["Mandarin","XX","S101"]}],
+    7: ["2", {B:["Office hours","MP, SR","A201"], P:["Office hours","TC, CSu","A203"], C:["Office hours","NJ, NL","Q2"]}]
+  },
+  Fri: {
+    2: ["x", ASSEMBLY],
+    3: ["1", {B:["Wheel","NL","A202"], P:["Spanish","SR","A102"], C:["Mandarin","XX","S101"]}],
+    4: ["1", {B:["Spanish","SR","A102"], P:["Wheel","NJ","Q2"], C:["Wheel","MP, CSu","F103"]}],
+    5: ["2", {B:["Music","CSu","F102"], P:["Math","NL","A102"], C:["English","MP","F103"]}],
+    6: ["2", {B:["English","MP","F103"], P:["Music","CSu","F102"], C:["Math","NL","A102"]}],
+    7: ["2", {B:["Math","NL","A102"], P:["English","MP","F103"], C:["Music","CSu","F102"]}]
+  }
+};
+
+SCHED["7"] = {
+  Mon: {
+    2: ["L", {B:["Spanish","SR","A101"], P:["Spanish","CR","A201"], C:["Mandarin","XX","S101"]}],
+    3: ["1", {B:["Science","SEL","Q1"], P:["Math","KH","A101"], C:["Music","JK","M1"]}],
+    4: ["1", {B:["Math","KH","A101"], P:["Music","JK","M1"], C:["Science","SEL","Q1"]}],
+    5: ["1", {B:["History","MH","A201"], P:["English","SPi","A103"], C:["Math","KH","A101"]}],
+    6: ["1", {B:["Music","JK","M1"], P:["History","MH","A201"], C:["English","SPi","A103"]}],
+    7: ["1", {B:["English","SPi","A103"], P:["Science","SEL","Q1"], C:["History","MH","A201"]}]
+  },
+  Tue: {
+    1: ["L", {B:["Spanish","SR","A101"], P:["Spanish","CR","A201"], C:["Mandarin","XX","S101"]}],
+    2: ["1", {B:["History","MH","A201"], P:["Math","KH","A101"], C:["Science","SEL","Q1"]}],
+    3: ["1", {B:["Math","KH","A101"], P:["History","MH","A201"], C:["Science","SEL","Q1"]}],
+    4: ["1", {B:["Science","SEL","Q1"], P:["PE","GB","Yard"], C:["History","MH","A201"]}],
+    5: ["1", {B:["Science","SEL","Q1"], P:["Art","MJ","F104"], C:["PE","GB","Yard"]}],
+    6: ["1", {B:["PE","GB","Yard"], P:["Art","MJ","F104"], C:["Math","KH","A101"]}],
+    7: ["L", {B:["Office hours","SEL, KH","A101"], P:["Office hours","MH, MJ","A102"], C:["Office hours","MS, XX","A103"]}]
+  },
+  Wed: {
+    2: ["L", {B:["Spanish","SR","A101"], P:["Spanish","CR","A201"], C:["Mandarin","XX","S101"]}],
+    3: ["1", {B:["Art","MJ","F104"], P:["History","MH","A201"], C:["Study hall","MP","S101"]}],
+    4: ["1", {B:["Art","MJ","F104"], P:["Science","SEL","Q1"], C:["English","SPi","A103"]}],
+    5: ["1", {B:["English","SPi","A103"], P:["Science","SEL","Q1"], C:["History","MH","A201"]}],
+    6: ["1", {B:["Wheel","SEL","Q1"], P:["Wheel","MH","A201"], C:["Wheel","SPi, KH","A103"]}],
+    7: ["1", {B:["History","MH","A201"], P:["English","SPi","A103"], C:["PE","GB","Yard"]}]
+  },
+  Thu: {
+    1: ["L", {B:["Spanish","SR","A101"], P:["Spanish","CR","A201"], C:["Mandarin","XX","S101"]}],
+    2: ["1", {B:["Math","KH","A101"], P:["Study hall","XX","S101"], C:["English","SPi","A103"]}],
+    3: ["1", {B:["Study hall","CR","S101"], P:["English","SPi","A103"], C:["Math","KH","A101"]}],
+    4: ["1", {B:["English","SPi","A103"], P:["Math","KH","A101"], C:["Drama","AMz","F101"]}],
+    5: ["1", {B:["Science","SEL","Q1"], P:["Drama","AMz","F101"], C:["Art","MJ","F104"]}],
+    6: ["1", {B:["Drama","AMz","F101"], P:["Music","JK","M1"], C:["Art","MJ","F104"]}],
+    7: ["1", {B:["Office hours","SEL, KH","A101"], P:["Office hours","MH, MJ","A102"], C:["Office hours","SPi, XX","A103"]}]
+  },
+  Fri: {
+    2: ["x", ASSEMBLY],
+    3: ["1", {B:["PE","GB","Yard"], P:["Science","SEL","Q1"], C:["Music","JK","M1"]}],
+    4: ["1", {B:["Music","JK","M1"], P:["PE","GB","Yard"], C:["Science","SEL","Q1"]}],
+    5: ["1", {B:["History","MH","A201"], P:["English","SPi","A103"], C:["Math","KH","A101"]}],
+    6: ["1", {B:["English","SPi","A103"], P:["Math","KH","A101"], C:["History","MH","A201"]}],
+    7: ["1", {B:["Math","KH","A101"], P:["History","MH","A201"], C:["English","SPi","A103"]}]
+  }
+};
+
+SCHED["8"] = {
+  Mon: {
+    2: ["1", {B:["History","AMi","A202"], P:["Wheel","CSe","F103"], C:["Wheel","JCo","Q1"]}],
+    3: ["1", {B:["Spanish","CR","A201"], P:["History","AMi","A202"], C:["Mandarin","XX","S101"]}],
+    4: ["1", {B:["Wheel","RM","F101"], P:["Spanish","CR","A201"], C:["History","AMi","A202"]}],
+    5: ["2", {B:["Math","CSe","A203"], P:["Science","JCo","Q2"], C:["Art","MJ","F104"]}],
+    6: ["2", {B:["Art","MJ","F104"], P:["Math","CSe","A203"], C:["Science","JCo","Q2"]}],
+    7: ["2", {B:["Science","JCo","Q2"], P:["Art","MJ","F104"], C:["Math","CSe","A203"]}]
+  },
+  Tue: {
+    1: ["2", {B:["Science","JCo","Q2"], P:["Math","CSe","A203"], C:["English","RM","A202"]}],
+    2: ["2", {B:["English","RM","A202"], P:["Science","JCo","Q2"], C:["Math","CSe","A203"]}],
+    3: ["2", {B:["Math","CSe","A203"], P:["English","RM","A202"], C:["Science","JCo","Q2"]}],
+    4: ["1", {B:["Music","JK","M1"], P:["History","AMi","F101"], C:["Mandarin","XX","S101"]}],
+    5: ["1", {B:["History","AMi","F101"], P:["Spanish","CR","A201"], C:["Music","JK","M1"]}],
+    6: ["1", {B:["Spanish","CR","A201"], P:["Music","JK","M1"], C:["History","AMi","F101"]}],
+    7: ["1", {B:["Office hours","AMi, AS","F101"], P:["Office hours","CR, CSe","F104"], C:["Office hours","JCo, RM","F103"]}]
+  },
+  Wed: {
+    2: ["1", {B:["Music","JK","M1"], P:["History","AMi","A202"], C:["PE","GB","Yard"]}],
+    3: ["1", {B:["PE","GB","Yard"], P:["Music","JK","M1"], C:["History","AMi","A202"]}],
+    4: ["1", {B:["History","AMi","A202"], P:["PE","GB","Yard"], C:["Music","JK","M1"]}],
+    5: ["2", {B:["Science","JCo","Q2"], P:["Math","CSe","A203"], C:["English","RM","A202"]}],
+    6: ["2", {B:["English","RM","A202"], P:["Science","JCo","Q2"], C:["Math","CSe","A203"]}],
+    7: ["2", {B:["Math","CSe","A203"], P:["English","RM","A202"], C:["Science","JCo","Q2"]}]
+  },
+  Thu: {
+    1: ["2", {B:["Math","CSe","A203"], P:["English","RM","A202"], C:["Science","JCo","Q2"]}],
+    2: ["2", {B:["Science","JCo","Q2"], P:["Math","CSe","A203"], C:["English","RM","A202"]}],
+    3: ["2", {B:["English","RM","A202"], P:["Science","JCo","Q2"], C:["Math","CSe","A203"]}],
+    4: ["1", {B:["Spanish","CR","A201"], P:["PE","GB","Yard"], C:["History","AMi","A202"]}],
+    5: ["1", {B:["PE","GB","Yard"], P:["History","AMi","A202"], C:["Mandarin","XX","S101"]}],
+    6: ["1", {B:["History","AMi","A202"], P:["Spanish","CR","A201"], C:["PE","GB","Yard"]}],
+    7: ["2", {B:["Office hours","AMi, AS","F101"], P:["Office hours","CR, CSe","F104"], C:["Office hours","JCo, RM","F103"]}]
+  },
+  Fri: {
+    2: ["x", ASSEMBLY],
+    3: ["1", {B:["Spanish","CR","A201"], P:["Study hall","AMi","A202"], C:["Study hall","CSe","A203"]}],
+    4: ["1", {B:["Study hall","AS","A203"], P:["Spanish","CR","A201"], C:["Mandarin","XX","S101"]}],
+    5: ["2", {B:["English","RM","A202"], P:["Art","MJ","F104"], C:["Drama","AMz","F101"]}],
+    6: ["2", {B:["Drama","AMz","F101"], P:["English","RM","A202"], C:["Art","MJ","F104"]}],
+    7: ["2", {B:["Art","MJ","F104"], P:["Drama","AMz","F101"], C:["English","RM","A202"]}]
+  }
+};
+
+var ADVISORS = {
+  "6": [["TC","A203"], ["NJ","Q2"], ["NL","F103"], ["CSu","F102"], ["SR","A102"]],
+  "7": [["SPi","A103"], ["MJ","F104"], ["SEL","Q1"], ["MH","A201"], ["KH","A101"]],
+  "8": [["JCo","M1"], ["CR","F101"], ["AMi","A202"], ["AS","S101"], ["RM","Garden / M2"]]
+};
+
+var NAMES = {
+  AMi: "Ms. Mitchell",
+  AMz: "Ms. Marziano",
+  AS:  "Mr. Andrew",
+  CR:  "Mx. Rodea",
+  CSe: "Ms. Seto",
+  CSu: "Ms. Sumsion",
+  GB:  "Coach G",
+  JCo: "Mr. Cohen",
+  JK:  "Mr. Kennedy",
+  KH:  "Ms. Henderson",
+  MH:  "Ms. Hardy",
+  MJ:  "Ms. Jimenez",
+  MP:  "Ms. Palmer",
+  MS:  "Mr. Stokes",
+  NJ:  "Ms. Nitya",
+  NL:  "Mr. Lewis",
+  RM:  "Ms. Manhoff",
+  SEL: "Mr. Ellenwood",
+  SPi: "Ms. Piper",
+  SR:  "Ms. Roggero",
+  TC:  "Mr. T",
+  XX:  "Ms. Xu"
+};
+
+
+
+/* ================= general model =================
+   DATA = { calendars: [ { id, name,
+       selectors: [ { id, name, options:[str] } ],
+       events: [ { id, day, s, e, kind:"event"|"break",
+                   sel: null|selectorId,
+                   one: {t, who, where},          // used when sel is null (breaks use one.t as label)
+                   per: { option: {t, who, where} } // used when sel is set
+                 } ] } ] }                          */
+
+var DAYS7 = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+FULL.Sat = "Saturday"; FULL.Sun = "Sunday";
+
+var PXMIN = 1.6;
+var UID = 1;
+function uid() { return "id" + (UID++); }
+
+function mins(s) {
+  var a = s.split(":"), hh = parseInt(a[0], 10), mm = parseInt(a[1], 10);
+  if (hh < 8) hh += 12;
+  return hh * 60 + mm;
+}
+function span(range) { var a = range.split("-"); return [mins(a[0]), mins(a[1])]; }
+function clock(m) {
+  var hh = Math.floor(m / 60), mm = m % 60;
+  if (hh > 12) hh -= 12;
+  return hh + ":" + (mm < 10 ? "0" + mm : mm);
+}
+function fmtRange(s, e) { return clock(s) + "-" + clock(e); }
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+/* Accepts H:MM, HH:MM (24h), or H:MM am/pm. Bare times before 8:00 are read as PM. */
+function parseTime(str) {
+  var m = /^(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)?$/.exec(String(str).replace(/^\s+|\s+$/g, ""));
+  if (!m) throw 'Bad time "' + str + '" — use H:MM, 24-hour HH:MM, or H:MM am/pm.';
+  var hh = parseInt(m[1], 10), mm = parseInt(m[2], 10), sfx = (m[3] || "").toLowerCase();
+  if (mm > 59 || hh > 23) throw 'Bad time "' + str + '".';
+  if (sfx === "pm" && hh < 12) hh += 12;
+  else if (sfx === "am" && hh === 12) hh = 0;
+  else if (!sfx && hh < 8) hh += 12;
+  return hh * 60 + mm;
+}
+
+function builtinName(code) {
+  if (!code) return "";
+  var parts = code.split(","), out = [];
+  for (var i = 0; i < parts.length; i++) {
+    var k = parts[i].replace(/^\s+|\s+$/g, "");
+    out.push(NAMES[k] || k);
+  }
+  return out.join(" & ");
+}
+
+/* Convert the built-in school data tables into the general model. */
+function convertBuiltin() {
+  var cals = [];
+  for (var g in SCHED) {
+    var hasL = false, d, p, cell;
+    for (d = 0; d < DAYS.length; d++) {
+      for (p = 1; p <= 7; p++) {
+        cell = SCHED[g][DAYS[d]][p];
+        if (cell && cell[0] === "L") hasL = true;
+      }
+    }
+    var selAdvOpts = [];
+    var advList = ADVISORS[g] || [];
+    for (var a = 0; a < advList.length; a++) {
+      selAdvOpts.push(builtinName(advList[a][0]) + " — " + advList[a][1]);
+    }
+    var s1 = { id: uid(), name: "1-block", options: ["B","P","C"] };
+    var s2 = { id: uid(), name: hasL ? "Language block" : "2-block", options: ["B","P","C"] };
+    var sa = { id: uid(), name: "Advisor", options: selAdvOpts };
+    var calObj = { id: uid(), name: g + "th grade", selectors: [s1, s2, sa], events: [] };
+
+    function mkEntry(v) {
+      if (v[0] === "Office hours") return { t: v[0], who: "", where: "" };
+      return { t: v[0], who: builtinName(v[1]), where: v[2] };
+    }
+    for (d = 0; d < DAYS.length; d++) {
+      var day = DAYS[d], dt = DAYTYPE[day];
+      for (p = 1; p <= 7; p++) {
+        var range = TIMES[dt][p], sp0 = span(range);
+        cell = SCHED[g][day][p];
+        if (cell) {
+          if (cell[0] === "x") {
+            calObj.events.push({ id: uid(), day: day, s: sp0[0], e: sp0[1], kind: "event",
+                                 sel: null, one: mkEntry(cell[1].B), per: null });
+          } else {
+            var selId = cell[0] === "1" ? s1.id : s2.id;
+            var per = { B: mkEntry(cell[1].B), P: mkEntry(cell[1].P), C: mkEntry(cell[1].C) };
+            calObj.events.push({ id: uid(), day: day, s: sp0[0], e: sp0[1], kind: "event",
+                                 sel: selId, one: null, per: per });
+          }
+        } else if (p === 1) {
+          var perA = {};
+          for (var a2 = 0; a2 < advList.length; a2++) {
+            perA[selAdvOpts[a2]] = { t: "Advisory", who: builtinName(advList[a2][0]), where: advList[a2][1] };
+          }
+          calObj.events.push({ id: uid(), day: day, s: sp0[0], e: sp0[1], kind: "event",
+                               sel: selAdvOpts.length ? sa.id : null,
+                               one: selAdvOpts.length ? null : { t: "Advisory", who: "", where: "" },
+                               per: selAdvOpts.length ? perA : null });
+        }
+        var br = BREAKAFTER[dt][p];
+        if (br) {
+          var sb = span(br[0]);
+          calObj.events.push({ id: uid(), day: day, s: sb[0], e: sb[1], kind: "break",
+                               sel: null, one: { t: br[1], who: "", where: "" }, per: null });
+        }
+      }
+    }
+    cals.push(calObj);
+  }
+  return { calendars: cals };
+}
+
+function deepCopy(o) { return JSON.parse(JSON.stringify(o)); }
+
+var BUILTIN = convertBuiltin();
+var DATA, customData = false;
+try {
+  var savedD = localStorage.getItem("schedV3");
+  if (savedD) { DATA = validateData(JSON.parse(savedD)); customData = true; }
+} catch (e0) { DATA = null; customData = false; }
+if (!DATA) DATA = deepCopy(BUILTIN);
+
+/* Light validation for loaded files / storage; throws on structural problems. */
+function validateData(d) {
+  if (!d || !d.calendars || !d.calendars.length) throw "No schedules in this file.";
+  for (var c = 0; c < d.calendars.length; c++) {
+    var cal = d.calendars[c];
+    if (!cal.id) cal.id = uid();
+    if (!cal.name) cal.name = "Schedule " + (c + 1);
+    if (!cal.selectors) cal.selectors = [];
+    if (!cal.events) cal.events = [];
+    var selIds = {};
+    for (var s = 0; s < cal.selectors.length; s++) {
+      var sel = cal.selectors[s];
+      if (!sel.id) sel.id = uid();
+      if (!sel.options || !sel.options.length) throw 'Menu "' + (sel.name || "?") + '" in ' + cal.name + " has no options.";
+      selIds[sel.id] = sel;
+    }
+    for (var e = 0; e < cal.events.length; e++) {
+      var ev = cal.events[e];
+      if (!ev.id) ev.id = uid();
+      if (DAYS7.indexOf(ev.day) < 0) throw cal.name + ': bad day "' + ev.day + '".';
+      if (!(ev.e > ev.s)) throw cal.name + " " + ev.day + ": an event ends before it starts.";
+      if (ev.kind !== "break") ev.kind = "event";
+      if (ev.sel) {
+        var sd = selIds[ev.sel];
+        if (!sd) throw cal.name + " " + ev.day + " " + fmtRange(ev.s, ev.e) + ": event refers to a missing menu.";
+        if (!ev.per) ev.per = {};
+        for (var o = 0; o < sd.options.length; o++) {
+          if (!ev.per[sd.options[o]]) ev.per[sd.options[o]] = { t: "", who: "", where: "" };
+        }
+      } else if (!ev.one) ev.one = { t: "", who: "", where: "" };
+    }
+  }
+  return d;
+}
+
+function persist() {
+  customData = true;
+  try { localStorage.setItem("schedV3", JSON.stringify(DATA)); } catch (e) {}
+  document.getElementById("resetBtn").style.display = "";
+}
+
+/* ================= colors ================= */
+
+var DEFAULT_COLORS = {
+  "Math":"#4a86d0", "Science":"#4aa568", "English":"#8a6cc7", "History":"#d9a03a",
+  "Spanish":"#d0666e", "Mandarin":"#d0666e",
+  "Music":"#3aa39b", "Art":"#cc66a2", "Drama":"#d97a3c", "PE":"#8fae3a",
+  "Wheel":"#7a93ad", "Advisory":"#6a7cd9",
+  "Study hall":"#a8a8a2", "Study skills":"#a8a8a2",
+  "Office hours":"#a8a8a2", "Assembly":"#a8a8a2"
+};
+var PALETTE = ["#4a86d0","#4aa568","#8a6cc7","#d9a03a","#d0666e","#3aa39b","#cc66a2","#d97a3c","#8fae3a","#6a7cd9","#7a93ad","#b0893a"];
+var colorOverrides = {};
+try { colorOverrides = JSON.parse(localStorage.getItem("schedColors") || "{}"); } catch (e1) { colorOverrides = {}; }
+
+function hashStr(s) {
+  var h = 0;
+  for (var i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function colorFor(title) {
+  if (!title) return null;
+  if (colorOverrides[title]) return colorOverrides[title];
+  if (DEFAULT_COLORS[title]) return DEFAULT_COLORS[title];
+  return PALETTE[hashStr(title) % PALETTE.length];
+}
+function tint(hex) {
+  var r = parseInt(hex.substr(1,2),16), g = parseInt(hex.substr(3,2),16), b = parseInt(hex.substr(5,2),16);
+  var f = 0.86; // blend toward white for a print-friendly fill
+  r = Math.round(r + (255 - r) * f); g = Math.round(g + (255 - g) * f); b = Math.round(b + (255 - b) * f);
+  return "rgb(" + r + "," + g + "," + b + ")";
+}
+function colorStyle(title) {
+  var c = colorFor(title);
+  if (!c) return "";
+  return "background:" + tint(c) + ";border-left-color:" + c + ";";
+}
+
+/* Unique event titles in the current calendar, in first-appearance order. */
+function calTitles(cal) {
+  var seen = {}, out = [];
+  for (var i = 0; i < cal.events.length; i++) {
+    var ev = cal.events[i];
+    if (ev.kind === "break") continue;
+    var ts = ev.sel ? objValues(ev.per) : [ev.one];
+    for (var j = 0; j < ts.length; j++) {
+      var t = ts[j].t;
+      if (t && !seen[t]) { seen[t] = 1; out.push(t); }
+    }
+  }
+  return out;
+}
+function objValues(o) { var a = []; for (var k in o) a.push(o[k]); return a; }
+
+function buildColorBar() {
+  var titles = calTitles(currentCal());
+  var h = '<span class="cbtitle">Colors</span>';
+  for (var i = 0; i < titles.length; i++) {
+    h += '<label class="sw"><input type="color" data-t="' + esc(titles[i]) + '" value="' + colorFor(titles[i]) + '">'
+       + esc(titles[i]) + "</label>";
+  }
+  h += '<button id="resetColors" type="button" class="small">Reset colors</button>';
+  var bar = document.getElementById("colorbar");
+  bar.innerHTML = h;
+  var inputs = bar.querySelectorAll("input[type=color]");
+  for (var j = 0; j < inputs.length; j++) {
+    inputs[j].addEventListener("input", function () {
+      colorOverrides[this.getAttribute("data-t")] = this.value;
+      saveColors(); render();
+    });
+  }
+  document.getElementById("resetColors").addEventListener("click", function () {
+    colorOverrides = {};
+    saveColors(); buildColorBar(); render();
+  });
+}
+function saveColors() {
+  try { localStorage.setItem("schedColors", JSON.stringify(colorOverrides)); } catch (e) {}
+}
+
+/* ================= app state ================= */
+
+function currentCal() {
+  var id = document.getElementById("cal").value;
+  for (var i = 0; i < DATA.calendars.length; i++) if (DATA.calendars[i].id === id) return DATA.calendars[i];
+  return DATA.calendars[0];
+}
+var chosenMap = {}; // calId|selId -> option
+
+function chosenFor(cal) {
+  var out = {};
+  for (var i = 0; i < cal.selectors.length; i++) {
+    var sel = cal.selectors[i];
+    var v = chosenMap[cal.id + "|" + sel.id];
+    out[sel.id] = sel.options.indexOf(v) >= 0 ? v : sel.options[0];
+  }
+  return out;
+}
+
+function fillCalSelect() {
+  var s = document.getElementById("cal"), keep = s.value, h = "";
+  for (var i = 0; i < DATA.calendars.length; i++) {
+    h += '<option value="' + DATA.calendars[i].id + '">' + esc(DATA.calendars[i].name) + "</option>";
+  }
+  s.innerHTML = h;
+  for (var j = 0; j < DATA.calendars.length; j++) if (DATA.calendars[j].id === keep) s.value = keep;
+}
+
+function buildChoosers() {
+  var cal = currentCal(), box = document.getElementById("choosers"), h = "";
+  var ch = chosenFor(cal);
+  for (var i = 0; i < cal.selectors.length; i++) {
+    var sel = cal.selectors[i];
+    if (sel.options.length < 2) continue;
+    h += '<div class="ctl"><label>' + esc(sel.name) + '</label><select data-sel="' + sel.id + '">';
+    for (var o = 0; o < sel.options.length; o++) {
+      h += '<option value="' + esc(sel.options[o]) + '"' + (sel.options[o] === ch[sel.id] ? " selected" : "") + ">"
+         + esc(sel.options[o]) + "</option>";
+    }
+    h += "</select></div>";
+  }
+  box.innerHTML = h;
+  var sels = box.querySelectorAll("select");
+  for (var j = 0; j < sels.length; j++) {
+    sels[j].addEventListener("change", function () {
+      chosenMap[currentCal().id + "|" + this.getAttribute("data-sel")] = this.value;
+      render();
+    });
+  }
+}
+
+/* Resolve an event to {t, who, where, tag} for the current choices. */
+function resolveEvent(cal, ev, ch) {
+  if (!ev.sel) return { t: ev.one.t, who: ev.one.who, where: ev.one.where, tag: "" };
+  var opt = ch[ev.sel];
+  var v = ev.per[opt] || { t: "", who: "", where: "" };
+  var titlesVary = false, first = null;
+  for (var k in ev.per) {
+    if (first === null) first = ev.per[k].t;
+    else if (ev.per[k].t !== first) titlesVary = true;
+  }
+  return { t: v.t, who: v.who, where: v.where, tag: titlesVary ? opt : "" };
+}
+
+function shownDays(cal) {
+  var used = {};
+  for (var i = 0; i < cal.events.length; i++) used[cal.events[i].day] = 1;
+  var out = ["Mon","Tue","Wed","Thu","Fri"];
+  if (used.Sat) out.push("Sat");
+  if (used.Sun) out.push("Sun");
+  return out;
+}
+
+function eventsOn(cal, day) {
+  var out = [];
+  for (var i = 0; i < cal.events.length; i++) if (cal.events[i].day === day) out.push(cal.events[i]);
+  out.sort(function (a, b) { return a.s - b.s; });
+  return out;
+}
+
+function dayWindow(cal) {
+  var lo = Infinity, hi = -Infinity;
+  for (var i = 0; i < cal.events.length; i++) {
+    if (cal.events[i].s < lo) lo = cal.events[i].s;
+    if (cal.events[i].e > hi) hi = cal.events[i].e;
+  }
+  if (lo === Infinity) { lo = 480; hi = 1020; }
+  return [Math.floor(lo / 30) * 30, Math.ceil(hi / 30) * 30];
+}
+
+/* ================= rendering ================= */
+
+var VT0 = 480;
+function yAt(m) { return Math.round((m - VT0) * PXMIN); }
+
+function summaryLine(cal, ch) {
+  var bits = [];
+  for (var i = 0; i < cal.selectors.length; i++) {
+    if (cal.selectors[i].options.length >= 2) bits.push(ch[cal.selectors[i].id]);
+  }
+  var who = document.getElementById("name").value.trim();
+  return (who ? who + "  —  " : "") + cal.name + (bits.length ? "  ·  " + bits.join(" · ") : "");
+}
+
+function renderGrid() {
+  var cal = currentCal(), ch = chosenFor(cal);
+  document.getElementById("titleLine").textContent = summaryLine(cal, ch);
+
+  var win = dayWindow(cal);
+  VT0 = win[0];
+  var H = Math.round((win[1] - VT0) * PXMIN);
+  var days = shownDays(cal);
+
+  var ticks = "";
+  for (var m = VT0; m <= win[1]; m += 30) {
+    ticks += '<div class="tick" style="top:' + yAt(m) + 'px">' + clock(m) + "</div>";
+  }
+  var h = '<div class="board"><div class="gutter"><div class="colhead">.</div>'
+        + '<div class="track" style="height:' + H + 'px">' + ticks + "</div></div>";
+
+  for (var d = 0; d < days.length; d++) {
+    var day = days[d];
+    h += '<div class="col"><div class="colhead">' + day + '</div><div class="track" style="height:' + H + 'px">';
+    var evs = eventsOn(cal, day);
+    for (var i = 0; i < evs.length; i++) {
+      var ev = evs[i];
+      if (ev.kind === "break") {
+        var yb = yAt(ev.s) + Math.round(((ev.e - ev.s) * PXMIN) / 2) - 6;
+        h += '<div class="gaplbl" style="top:' + yb + 'px">' + esc(ev.one.t) + "</div>";
+        continue;
+      }
+      var v = resolveEvent(cal, ev, ch);
+      var y = yAt(ev.s), hgt = Math.round((ev.e - ev.s) * PXMIN) - 2;
+      var meta = (v.who ? v.who : "") + (v.who && v.where ? " · " : "") + (v.where ? v.where : "");
+      h += '<div class="blk" style="top:' + y + "px;height:" + hgt + "px;" + colorStyle(v.t) + '">'
+         + '<div class="t">' + fmtRange(ev.s, ev.e) + (v.tag ? ' <span class="sp">' + esc(v.tag) + "</span>" : "") + "</div>"
+         + '<div class="n">' + esc(v.t) + "</div>"
+         + (meta ? '<div class="m">' + esc(meta) + "</div>" : "")
+         + "</div>";
+    }
+    h += "</div></div>";
+  }
+  h += "</div>";
+  document.getElementById("grid").innerHTML = h;
+}
+
+function renderPages() {
+  var cal = currentCal(), ch = chosenFor(cal);
+  var days = shownDays(cal), out = "";
+  for (var d = 0; d < days.length; d++) {
+    var day = days[d];
+    out += '<div class="daypage"><h2>' + FULL[day] + "</h2>"
+         + '<p class="who">' + esc(summaryLine(cal, ch)) + "</p>"
+         + '<div class="rows">';
+    var evs = eventsOn(cal, day);
+    for (var i = 0; i < evs.length; i++) {
+      var ev = evs[i];
+      if (ev.kind === "break") {
+        out += '<div class="row brk"><div class="t">' + fmtRange(ev.s, ev.e) + '</div><div class="n">' + esc(ev.one.t) + "</div></div>";
+        continue;
+      }
+      var v = resolveEvent(cal, ev, ch);
+      var meta = (v.who ? v.who : "") + (v.who && v.where ? " · " : "") + (v.where ? v.where : "");
+      out += '<div class="row" style="' + colorStyle(v.t) + '"><div class="t">' + fmtRange(ev.s, ev.e)
+           + (v.tag ? ' <span class="sp">' + esc(v.tag) + "</span>" : "") + "</div>"
+           + '<div class="n">' + esc(v.t) + "</div>"
+           + '<div class="m">' + esc(meta) + "</div></div>";
+    }
+    out += "</div></div>";
+  }
+  document.getElementById("pagesView").innerHTML = out;
+}
+
+function render() {
+  var mode = document.getElementById("mode").value;
+  document.body.className = "mode-" + mode;
+  document.getElementById("pageRule").textContent =
+    mode === "grid" ? "@page { size: letter landscape; margin: 0.4in; }"
+                    : "@page { size: letter portrait; margin: 0.5in; }";
+  if (mode === "grid") renderGrid(); else renderPages();
+}
+
+function refreshAll() {
+  fillCalSelect();
+  buildChoosers();
+  buildColorBar();
+  if (editorOpen) renderEditor();
+  render();
+}
+
+/* ================= editor ================= */
+
+var editorOpen = false;
+var evForm = null; // null | {mode:"add"} | {mode:"edit", id}
+
+function findSel(cal, id) {
+  for (var i = 0; i < cal.selectors.length; i++) if (cal.selectors[i].id === id) return cal.selectors[i];
+  return null;
+}
+function findEv(cal, id) {
+  for (var i = 0; i < cal.events.length; i++) if (cal.events[i].id === id) return cal.events[i];
+  return null;
+}
+
+function overlaps(cal, day, s, e, skipIds) {
+  for (var i = 0; i < cal.events.length; i++) {
+    var ev = cal.events[i];
+    if (ev.day !== day) continue;
+    if (skipIds && skipIds[ev.id]) continue;
+    if (s < ev.e && ev.s < e) return ev;
+  }
+  return null;
+}
+
+function renderEditor() {
+  var cal = currentCal(), h = "";
+
+  h += "<h3>This schedule</h3>";
+  h += '<div class="edrow">'
+     + '<input type="text" id="edCalName" value="' + esc(cal.name) + '" style="width:220px;">'
+     + '<button class="small" id="edCalRename" type="button">Rename</button>'
+     + '<span class="muted">|</span>'
+     + '<button class="small" id="edCalAdd" type="button">New schedule</button>'
+     + '<button class="small" id="edCalDup" type="button">Duplicate</button>'
+     + '<button class="small" id="edCalDel" type="button">Delete</button>'
+     + "</div>";
+
+  h += "<h3>Choice menus <span class='muted' style='text-transform:none;font-weight:400;'>&mdash; optional; for schedules that vary by person (sections, shifts, groups)</span></h3>";
+  for (var i = 0; i < cal.selectors.length; i++) {
+    var sel = cal.selectors[i];
+    h += '<div class="edrow" data-selrow="' + sel.id + '">'
+       + '<input type="text" data-selname value="' + esc(sel.name) + '" style="width:150px;" title="Menu name">'
+       + '<input type="text" data-selopts class="grow" value="' + esc(sel.options.join(", ")) + '" title="Options, comma-separated">'
+       + '<button class="small" data-selsave type="button">Apply</button>'
+       + '<button class="small" data-seldel type="button">Delete</button>'
+       + "</div>";
+  }
+  h += '<div class="edrow"><button class="small" id="edSelAdd" type="button">Add menu</button></div>';
+
+  h += "<h3>Events</h3>";
+  h += '<table class="evtable"><tr><th>Day</th><th>Time</th><th>What</th><th></th><th></th></tr>';
+  var days = shownDays(cal);
+  for (var d = 0; d < DAYS7.length; d++) {
+    if (days.indexOf(DAYS7[d]) < 0) continue;
+    var evs = eventsOn(cal, DAYS7[d]);
+    for (var j = 0; j < evs.length; j++) {
+      var ev = evs[j], what;
+      if (ev.kind === "break") what = '<span class="dim">break: ' + esc(ev.one.t) + "</span>";
+      else if (ev.sel) {
+        var sd = findSel(cal, ev.sel);
+        var ts = [], seenT = {};
+        for (var k in ev.per) { if (ev.per[k].t && !seenT[ev.per[k].t]) { seenT[ev.per[k].t] = 1; ts.push(ev.per[k].t); } }
+        what = esc(ts.join(" / ")) + ' <span class="dim">(by ' + esc(sd ? sd.name : "?") + ")</span>";
+      } else what = esc(ev.one.t);
+      h += "<tr><td>" + ev.day + "</td><td>" + fmtRange(ev.s, ev.e) + "</td><td>" + what + "</td>"
+         + '<td><button class="small" data-evedit="' + ev.id + '" type="button">Edit</button></td>'
+         + '<td><button class="small" data-evdel="' + ev.id + '" type="button">Delete</button></td></tr>';
+    }
+  }
+  h += "</table>";
+  h += '<div class="edrow"><button class="small" id="edEvAdd" type="button">Add event</button></div>';
+
+  if (evForm) h += buildEvForm(cal);
+
+  var box = document.getElementById("editor");
+  box.innerHTML = h;
+  wireEditor(box, cal);
+}
+
+function buildEvForm(cal) {
+  var ed = evForm.mode === "edit" ? findEv(cal, evForm.id) : null;
+  var kind = ed ? ed.kind : "event";
+  var selId = ed ? (ed.sel || "") : "";
+  var h = '<div class="evform"><h3>' + (ed ? "Edit event" : "Add event") + "</h3>";
+
+  h += '<div class="edrow"><label style="min-width:60px;">Type</label><select id="efKind">'
+     + '<option value="event"' + (kind === "event" ? " selected" : "") + '>Event</option>'
+     + '<option value="break"' + (kind === "break" ? " selected" : "") + '>Break / gap</option>'
+     + "</select></div>";
+
+  if (ed) {
+    h += '<div class="edrow"><label style="min-width:60px;">Day</label><select id="efDay">';
+    for (var d = 0; d < DAYS7.length; d++) {
+      h += '<option value="' + DAYS7[d] + '"' + (ed.day === DAYS7[d] ? " selected" : "") + ">" + FULL[DAYS7[d]] + "</option>";
+    }
+    h += "</select></div>";
+  } else {
+    h += '<div class="edrow"><label style="min-width:60px;">Days</label><div class="daychecks">';
+    for (var d2 = 0; d2 < DAYS7.length; d2++) {
+      h += '<label><input type="checkbox" data-efday value="' + DAYS7[d2] + '"> ' + DAYS7[d2] + "</label>";
+    }
+    h += "</div></div>";
+  }
+
+  h += '<div class="edrow"><label style="min-width:60px;">Time</label>'
+     + '<input type="text" id="efStart" placeholder="8:20" style="width:90px;" value="' + (ed ? clock(ed.s) : "") + '">'
+     + '<span>to</span>'
+     + '<input type="text" id="efEnd" placeholder="9:10" style="width:90px;" value="' + (ed ? clock(ed.e) : "") + '"></div>';
+
+  h += '<div class="edrow" id="efVaryRow"><label style="min-width:60px;">Content</label><select id="efSel">'
+     + '<option value="">Same for everyone</option>';
+  for (var i = 0; i < cal.selectors.length; i++) {
+    h += '<option value="' + cal.selectors[i].id + '"' + (selId === cal.selectors[i].id ? " selected" : "") + ">"
+       + "Varies by " + esc(cal.selectors[i].name) + "</option>";
+  }
+  h += "</select></div>";
+
+  h += '<div id="efContent">' + buildEvContent(cal, ed, kind, selId) + "</div>";
+
+  h += '<div class="edrow" style="margin-top:8px;">'
+     + '<button id="efSave" class="primary" type="button">' + (ed ? "Save changes" : "Add") + "</button>"
+     + '<button id="efCancel" type="button">Cancel</button></div></div>';
+  return h;
+}
+
+function buildEvContent(cal, ed, kind, selId) {
+  if (kind === "break") {
+    var lbl = ed && ed.kind === "break" ? ed.one.t : "";
+    return '<div class="edrow"><label style="min-width:60px;">Label</label>'
+         + '<input type="text" id="efTitle" placeholder="Lunch" value="' + esc(lbl) + '"></div>';
+  }
+  if (!selId) {
+    var one = ed && !ed.sel && ed.kind === "event" ? ed.one : { t: "", who: "", where: "" };
+    return '<div class="edrow"><label style="min-width:60px;">&nbsp;</label>'
+         + '<input type="text" id="efTitle" placeholder="Title" value="' + esc(one.t) + '">'
+         + '<input type="text" id="efWho" placeholder="Person / detail" value="' + esc(one.who) + '">'
+         + '<input type="text" id="efWhere" placeholder="Location" value="' + esc(one.where) + '"></div>';
+  }
+  var sel = findSel(cal, selId);
+  var h = '<table class="pertable"><tr><th>' + esc(sel.name) + "</th><th>Title</th><th>Person / detail</th><th>Location</th></tr>";
+  for (var i = 0; i < sel.options.length; i++) {
+    var o = sel.options[i];
+    var v = ed && ed.sel === selId && ed.per && ed.per[o] ? ed.per[o] : { t: "", who: "", where: "" };
+    h += "<tr><td><b>" + esc(o) + "</b></td>"
+       + '<td><input type="text" data-pt="' + esc(o) + '" value="' + esc(v.t) + '"></td>'
+       + '<td><input type="text" data-pw="' + esc(o) + '" value="' + esc(v.who) + '"></td>'
+       + '<td><input type="text" data-pr="' + esc(o) + '" value="' + esc(v.where) + '"></td></tr>';
+  }
+  return h + "</table>";
+}
+
+function wireEditor(box, cal) {
+  function on(id, fn) { var el = box.querySelector("#" + id); if (el) el.addEventListener("click", fn); }
+
+  on("edCalRename", function () {
+    var v = box.querySelector("#edCalName").value.trim();
+    if (v) { cal.name = v; persist(); refreshAll(); }
+  });
+  on("edCalAdd", function () {
+    var c = { id: uid(), name: "New schedule", selectors: [], events: [] };
+    DATA.calendars.push(c);
+    persist(); document.getElementById("cal").value = c.id; fillCalSelect();
+    document.getElementById("cal").value = c.id;
+    refreshAll();
+  });
+  on("edCalDup", function () {
+    var c = deepCopy(cal);
+    c.id = uid(); c.name = cal.name + " (copy)";
+    DATA.calendars.push(c);
+    persist(); fillCalSelect(); document.getElementById("cal").value = c.id; refreshAll();
+  });
+  on("edCalDel", function () {
+    if (DATA.calendars.length < 2) { alert("Can't delete the only schedule."); return; }
+    if (!confirm('Delete "' + cal.name + '" and all its events?')) return;
+    for (var i = 0; i < DATA.calendars.length; i++) {
+      if (DATA.calendars[i].id === cal.id) { DATA.calendars.splice(i, 1); break; }
+    }
+    persist(); fillCalSelect(); refreshAll();
+  });
+
+  var selRows = box.querySelectorAll("[data-selrow]");
+  for (var i = 0; i < selRows.length; i++) {
+    (function (rowEl) {
+      var sid = rowEl.getAttribute("data-selrow");
+      rowEl.querySelector("[data-selsave]").addEventListener("click", function () {
+        var sel = findSel(cal, sid);
+        var nm = rowEl.querySelector("[data-selname]").value.trim();
+        var raw = rowEl.querySelector("[data-selopts]").value.split(",");
+        var opts = [], seen = {};
+        for (var k = 0; k < raw.length; k++) {
+          var o = raw[k].replace(/^\s+|\s+$/g, "");
+          if (o && !seen[o]) { seen[o] = 1; opts.push(o); }
+        }
+        if (!nm || !opts.length) { alert("A menu needs a name and at least one option."); return; }
+        sel.name = nm;
+        var old = sel.options;
+        sel.options = opts;
+        // keep matching per-option entries; blank out new options
+        for (var e = 0; e < cal.events.length; e++) {
+          var ev = cal.events[e];
+          if (ev.sel !== sid) continue;
+          var per = {};
+          for (var oo = 0; oo < opts.length; oo++) per[opts[oo]] = ev.per[opts[oo]] || { t: "", who: "", where: "" };
+          ev.per = per;
+        }
+        persist(); refreshAll();
+      });
+      rowEl.querySelector("[data-seldel]").addEventListener("click", function () {
+        var sel = findSel(cal, sid), used = 0;
+        for (var e = 0; e < cal.events.length; e++) if (cal.events[e].sel === sid) used++;
+        if (used && !confirm('"' + sel.name + '" is used by ' + used + " event(s). Deleting it keeps each event's first option only. Continue?")) return;
+        for (var e2 = 0; e2 < cal.events.length; e2++) {
+          var ev2 = cal.events[e2];
+          if (ev2.sel !== sid) continue;
+          ev2.one = ev2.per[sel.options[0]] || { t: "", who: "", where: "" };
+          ev2.sel = null; ev2.per = null;
+        }
+        for (var s2 = 0; s2 < cal.selectors.length; s2++) {
+          if (cal.selectors[s2].id === sid) { cal.selectors.splice(s2, 1); break; }
+        }
+        persist(); refreshAll();
+      });
+    })(selRows[i]);
+  }
+  on("edSelAdd", function () {
+    cal.selectors.push({ id: uid(), name: "Group", options: ["A", "B"] });
+    persist(); refreshAll();
+  });
+
+  var evEdits = box.querySelectorAll("[data-evedit]");
+  for (var j = 0; j < evEdits.length; j++) {
+    (function (btn) {
+      btn.addEventListener("click", function () {
+        evForm = { mode: "edit", id: btn.getAttribute("data-evedit") };
+        renderEditor();
+      });
+    })(evEdits[j]);
+  }
+  var evDels = box.querySelectorAll("[data-evdel]");
+  for (var j2 = 0; j2 < evDels.length; j2++) {
+    (function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-evdel");
+        for (var e = 0; e < cal.events.length; e++) {
+          if (cal.events[e].id === id) { cal.events.splice(e, 1); break; }
+        }
+        if (evForm && evForm.mode === "edit" && evForm.id === id) evForm = null;
+        persist(); refreshAll();
+      });
+    })(evDels[j2]);
+  }
+  on("edEvAdd", function () { evForm = { mode: "add" }; renderEditor(); });
+
+  if (evForm) wireEvForm(box, cal);
+}
+
+function wireEvForm(box, cal) {
+  function redrawContent() {
+    var kind = box.querySelector("#efKind").value;
+    var selId = box.querySelector("#efSel") ? box.querySelector("#efSel").value : "";
+    var ed = evForm.mode === "edit" ? findEv(cal, evForm.id) : null;
+    box.querySelector("#efVaryRow").style.display = kind === "break" ? "none" : "";
+    box.querySelector("#efContent").innerHTML = buildEvContent(cal, ed, kind, kind === "break" ? "" : selId);
+  }
+  box.querySelector("#efKind").addEventListener("change", redrawContent);
+  box.querySelector("#efSel").addEventListener("change", redrawContent);
+  box.querySelector("#efCancel").addEventListener("click", function () { evForm = null; renderEditor(); });
+
+  box.querySelector("#efSave").addEventListener("click", function () {
+    try {
+      var kind = box.querySelector("#efKind").value;
+      var s = parseTime(box.querySelector("#efStart").value);
+      var e = parseTime(box.querySelector("#efEnd").value);
+      if (e <= s) throw "End time must be after start time.";
+
+      var days = [];
+      if (evForm.mode === "edit") days = [box.querySelector("#efDay").value];
+      else {
+        var cbs = box.querySelectorAll("[data-efday]");
+        for (var i = 0; i < cbs.length; i++) if (cbs[i].checked) days.push(cbs[i].value);
+        if (!days.length) throw "Pick at least one day.";
+      }
+
+      var sel = null, one = null, per = null;
+      if (kind === "break") {
+        one = { t: box.querySelector("#efTitle").value.trim() || "Break", who: "", where: "" };
+      } else {
+        var selId = box.querySelector("#efSel").value;
+        if (!selId) {
+          one = { t: box.querySelector("#efTitle").value.trim(),
+                  who: box.querySelector("#efWho").value.trim(),
+                  where: box.querySelector("#efWhere").value.trim() };
+          if (!one.t) throw "The event needs a title.";
+        } else {
+          sel = selId;
+          var sd = findSel(cal, selId);
+          per = {};
+          var any = false;
+          for (var o = 0; o < sd.options.length; o++) {
+            var op = sd.options[o];
+            per[op] = { t: box.querySelector('[data-pt="' + CSS.escape(op) + '"]').value.trim(),
+                        who: box.querySelector('[data-pw="' + CSS.escape(op) + '"]').value.trim(),
+                        where: box.querySelector('[data-pr="' + CSS.escape(op) + '"]').value.trim() };
+            if (per[op].t) any = true;
+          }
+          if (!any) throw "Give at least one option a title.";
+        }
+      }
+
+      var skip = {};
+      if (evForm.mode === "edit") skip[evForm.id] = 1;
+      for (var d = 0; d < days.length; d++) {
+        var clash = overlaps(cal, days[d], s, e, skip);
+        if (clash) throw days[d] + ": overlaps " + fmtRange(clash.s, clash.e) + " ("
+                       + (clash.kind === "break" ? clash.one.t : (clash.sel ? "an event" : clash.one.t)) + ").";
+      }
+
+      if (evForm.mode === "edit") {
+        var ev = findEv(cal, evForm.id);
+        ev.day = days[0]; ev.s = s; ev.e = e; ev.kind = kind; ev.sel = sel; ev.one = one; ev.per = per;
+      } else {
+        for (var d2 = 0; d2 < days.length; d2++) {
+          cal.events.push({ id: uid(), day: days[d2], s: s, e: e, kind: kind,
+                            sel: sel, one: one ? deepCopy(one) : null, per: per ? deepCopy(per) : null });
+        }
+      }
+      evForm = null;
+      persist(); refreshAll();
+    } catch (err) { alert(err); }
+  });
+}
+
+/* ================= save / load ================= */
+
+function download(name, text, type) {
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: type || "application/json" }));
+  a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ================= wiring ================= */
+
+document.getElementById("cal").addEventListener("change", function () {
+  evForm = null;
+  buildChoosers(); buildColorBar();
+  if (editorOpen) renderEditor();
+  render();
+});
+document.getElementById("mode").addEventListener("change", render);
+document.getElementById("name").addEventListener("input", render);
+document.getElementById("print").addEventListener("click", function () { window.print(); });
+
+document.getElementById("editBtn").addEventListener("click", function () {
+  editorOpen = !editorOpen;
+  document.getElementById("editor").style.display = editorOpen ? "" : "none";
+  this.textContent = editorOpen ? "Close editor" : "Edit schedule";
+  if (editorOpen) renderEditor();
+});
+
+document.getElementById("saveBtn").addEventListener("click", function () {
+  download("schedule.json", JSON.stringify(DATA, null, 1));
+});
+document.getElementById("loadBtn").addEventListener("click", function () {
+  document.getElementById("jsonFile").click();
+});
+document.getElementById("jsonFile").addEventListener("change", function () {
+  var f = this.files[0];
+  this.value = "";
+  if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function () {
+    try {
+      DATA = validateData(JSON.parse(rd.result));
+      persist(); evForm = null; refreshAll();
+    } catch (err) { alert("Couldn't load that file:\n\n" + err); }
+  };
+  rd.readAsText(f);
+});
+document.getElementById("resetBtn").addEventListener("click", function () {
+  if (!confirm("Discard your changes and restore the example school schedule?")) return;
+  DATA = deepCopy(BUILTIN);
+  customData = false;
+  try { localStorage.removeItem("schedV3"); } catch (e) {}
+  document.getElementById("resetBtn").style.display = "none";
+  evForm = null;
+  refreshAll();
+});
+
+if (customData) document.getElementById("resetBtn").style.display = "";
+refreshAll();
+</script>
+</body>
+</html>
